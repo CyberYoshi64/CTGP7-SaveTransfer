@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/build",
+                "C:/devkitpro/devkitARM/arm-none-eabi/include",
+                "C:/devkitpro/libctru/include",
+                "C:/devkitpro/libcwav/include",
+                "C:/devkitpro/libncsnd/include",
+                "C:/devkitpro/portlibs/3ds/include"
+            ],
+            "defines": [],
+            "compilerPath": "C:/devkitpro/devkitARM/bin/arm-none-eabi-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++11",
+            "intelliSenseMode": "linux-gcc-arm",
+            "forcedInclude": []
+        }
+    ],
+    "version": 4
+}

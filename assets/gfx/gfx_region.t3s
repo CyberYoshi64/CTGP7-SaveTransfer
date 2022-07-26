@@ -1,0 +1,7 @@
+--atlas -f rgb565 -z auto -p sheet-region.png
+region/jpn.png
+region/eur.png
+region/usa.png
+region/kor.png
+region/twn.png
+region/chn.png
