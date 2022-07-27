@@ -199,11 +199,6 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	touchpx = touch.px; touchpy = touch.py;
 	touchot = touchpt;
 
-	if (hDown & KEY_ZL){
-		errorcode=1011337;
-		SFX::Fail();
-		sprintf(errorstr,"This is a dummy error. Do you really think that?");
-	}
 	if ((hDown & KEY_START) && appMode < 4 && fadealpha < 128){
 		exiting=true; SFX::Back();
 		fadecolor=0; fadeout=true;
@@ -293,7 +288,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 				trnsfGameCartRegion=254;
 				appMode = 2; break;
 			case 2:
-				if ((maincnt % 90)==0) Transfer::ProbeVersions();
+				if ((maincnt % 30)==0) Transfer::ProbeVersions();
 				while (dir) {
 					if (buttonSel == 0) {
 						buttonSel += dirv;
@@ -321,7 +316,28 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 						break;
 					}
 				}
-				if (touchedArea(touchpx, touchpy, 25, 48, 270, 32) && !touchot) {buttonSel=0; sel=1;}
+				if (touchedArea(touchpx, touchpy, 25, 48, 270, 32) && !touchot) {
+					if (gameCartGood){
+						buttonSel=0; sel=1;
+					} else {
+						errorcode=-1;
+						if (trnsfGameCartRegion == 255) {
+							sprintf(errorstr,
+							"The game cart cannot be used.\n\n"
+							"Try taking the game cart out and reinsert it.\n"
+							"The game cart might not be detected, it could be dirty or damaged.\n"
+							"Make sure, you insert a Mario Kart 7 cart, that is a final release.\n"
+							"Other games, as well as kiosk and debug builds are not supported."
+							);
+						} else {
+							sprintf(errorstr,
+							"The game cart cannot be detected.\n"
+							"Did you insert a game cart in it?\n\n"
+							"The game cart might be damaged or is dirty. Try removing and reinserting the game cart and try again."
+							);
+						}
+					}
+				}
 				if (hDown & BUTTON_OK) sel=1;
 				if (hDown & BUTTON_BACK) {
 					appMode = 0; SFX::Back();
