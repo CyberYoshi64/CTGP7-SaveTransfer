@@ -68,7 +68,7 @@ void ShowProgress() {
     Draw_Rect(0,200,320,40,0x80000000);
     char str[512];
     sprintf(str,"Copying %s ... (%.1f KiB / %.1f KiB)", transferPath, (u32)transferFileProgress/1024.f, (u32)transferCurrentSize/1024.f);
-    DrawStrBoxC(160, 204, 0.45f, 0x7FFFFFFF, str, 240, 1);
+    DrawStrBoxC(160, 204, 0.45f, 0x7FFFFFFF, str, 280);
     Draw_Rect(40,224,240,12,0xFF000000);
     Draw_Rect(40,224,240 * C2D_Clamp((float)transferFileProgress / transferCurrentSize, 0, 1),12,0xFF408000);
     C3D_FrameEnd(0);

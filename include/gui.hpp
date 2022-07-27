@@ -60,8 +60,8 @@ void Draw_ImageBlend(C2D_SpriteSheet sheet, size_t key, int x, int y, u32 color,
 void Draw_ImageAlpha(C2D_SpriteSheet sheet, size_t key, int x, int y, u8 alpha, float sx = 1, float sy = 1);
 void Draw_EndFrame(void);
 void Draw_Text(float x, float y, float size, u32 color, const char *text);
-void DrawStrBox(float x, float y, float size, u32 color, const char *text, float width, float maxwidth);
-void DrawStrBoxC(float x, float y, float size, u32 color, const char *text, float width, float maxwidth);
+void DrawStrBox(float x, float y, float size, u32 color, const char *text, float width, float maxwidth = 1);
+void DrawStrBoxC(float x, float y, float size, u32 color, const char *text, float width, float maxwidth = 1);
 void DrawStrBoxCC(float x, float y, float size, u32 color, const char *text, float width, float height);
 void Draw_Textf(float x, float y, float size, u32 color, const char* text, ...);
 void Draw_Text_Center(float x, float y, float size, u32 color, const char *text);

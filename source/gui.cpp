@@ -115,7 +115,7 @@ void Draw_Text(float x, float y, float size, u32 color, const char *text) {
 	C2D_DrawText(&c2d_text, C2D_WithColor | C2D_AlignLeft, x, y, 0.5f, size, size, color);
 }
 
-void DrawStrBox(float x, float y, float size, u32 color, const char *text, float width, float maxwidth = 1) {
+void DrawStrBox(float x, float y, float size, u32 color, const char *text, float width, float maxwidth) {
 	C2D_Text c2d_text;
 	C2D_TextFontParse(&c2d_text, systemFont, sizeBuf, text);
 	C2D_TextOptimize(&c2d_text);
@@ -129,7 +129,7 @@ void Draw_Text_Center(float x, float y, float size, u32 color, const char *text)
 	C2D_DrawText(&c2d_text, C2D_WithColor | C2D_AlignCenter, x, y, 0.5f, size, size, color);
 }
 
-void DrawStrBoxC(float x, float y, float size, u32 color, const char *text, float width, float maxwidth = 1) {
+void DrawStrBoxC(float x, float y, float size, u32 color, const char *text, float width, float maxwidth) {
 	C2D_Text c2d_text;
 	C2D_TextFontParse(&c2d_text, systemFont, sizeBuf, text);
 	C2D_TextOptimize(&c2d_text);
@@ -220,41 +220,41 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	bool gameCartGood = trnsfGameCartRegion<100;
 	switch (appMode) {
 		case 0:
-			Draw_Text_Center(160, 16, 0.5f, -1, "Which way do you want to transfer?");
+			DrawStrBoxC(160, 16, 0.5f, -1, "Which way do you want to transfer?",300);
 			Draw_Rect(40, 85, 240, 40, GuiButtonColor(buttonSel==0, 1));
 			Draw_Text_Center(160, 95, 0.75f, COLOR_BT_TX_NORMAL, "CTGP-7 \uE019 MK7");
 			Draw_Rect(40, 135, 240, 40, GuiButtonColor(buttonSel==1, 1));
 			Draw_Text_Center(160, 145, 0.75f, COLOR_BT_TX_NORMAL, "MK7 \uE019 CTGP-7");
 			break;
 		case 2:
-			Draw_Text_Center(160, 16, 0.5f, -1, "Which version of MK7 do you want to choose?");
+			DrawStrBoxC(160, 16, 0.5f, -1, "Which version of MK7 do you want to choose?",300);
 			Draw_Rect(25, 48, 270, 32, GuiButtonColor(buttonSel==0, gameCartGood));
 			if (trnsfGameCartRegion == 255) {
-				Draw_Text(60, 56, 0.5f, COLOR_BT_TX_BAD, "Game Card couldn't be detected.");
+				DrawStrBox(60, 56, 0.5f, COLOR_BT_TX_BAD, "Game Card couldn't be detected.", 224);
 			} else if (trnsfGameCartRegion == 254) {
-				Draw_Text(60, 56, 0.5f, COLOR_BT_TX_BAD, "Game Card is not inserted.");
+				DrawStrBox(60, 56, 0.5f, COLOR_BT_TX_BAD, "Game Card is not inserted.", 224);
 			} else {
-				Draw_Text(60, 56, 0.5f, COLOR_BT_TX_NORMAL, ("Game Card ("+Transfer::GetRegionString(trnsfGameCartRegion)+")").c_str());
+				DrawStrBox(60, 56, 0.5f, COLOR_BT_TX_NORMAL, ("Game Card ("+Transfer::GetRegionString(trnsfGameCartRegion)+")").c_str(), 224);
 			}
 			Draw_ImageAlpha(gfx_main, gfx_main_gamecart_idx, 30, 52, 127*(1+gameCartGood));
 			Draw_ImageAlpha(gfx_region, trnsfGameCartRegion, 36, 60, 127*(1+gameCartGood));
 			for (u8 i=0; i < TRANSFER_REGION_TOTAL; i++){
 				bool c = (trnsfAvailRegion>>i)&1;
 				Draw_Rect(25+(i%2)*140, 90+(i/2)*40, 130, 32, GuiButtonColor(buttonSel == 1+i, c));
-				Draw_ImageAlpha(gfx_region, i, 30+(i%2)*140, 100+(i/2)*40, 127*(1+c));
-				Draw_Text(55+(i%2)*140, 98+(i/2)*40, 0.5f, GuiButtonTextColor(buttonSel == 1+i, c), ("Digital ("+Transfer::GetRegionString(i)+")").c_str());
+				Draw_ImageAlpha(gfx_region, i, 29+(i%2)*140, 100+(i/2)*40, 127*(1+c));
+				DrawStrBox(52+(i%2)*140, 98+(i/2)*40, 0.5f, GuiButtonTextColor(buttonSel == 1+i, c), ("Digital ("+Transfer::GetRegionString(i)+")").c_str(),95);
 			}
 			break;
 		case 3:
-			Draw_Text_Center(160, 16, 0.5f, -1, "Do you want to transfer your ghosts too?\n(Ghosts for original courses only.)");
+			DrawStrBoxC(160, 16, 0.5f, -1, "Do you want to transfer your ghosts too?\n(Ghosts for original courses only.)",300);
 			Draw_Rect(40, 85, 240, 40, GuiButtonColor(buttonSel==0, 1));
 			Draw_Text_Center(160, 95, 0.75f, COLOR_BT_TX_NORMAL, "Yes");
 			Draw_Rect(40, 135, 240, 40, GuiButtonColor(buttonSel==1, 1));
 			Draw_Text_Center(160, 145, 0.75f, COLOR_BT_TX_NORMAL, "No");
-			Draw_Text_Center(160, 192, 0.5f, 0xC0FFC080, ((std::string)"MK7 version selected: "+Transfer::GetRegionString(transferRegion)+", "+(transferIsSD?"Digital":"Physical")).c_str());
+			DrawStrBoxC(160, 192, 0.5f, 0xC0FFC080, ((std::string)"MK7 version selected: "+Transfer::GetRegionString(transferRegion)+", "+(transferIsSD?"Digital":"Physical")).c_str(),240);
 			break;
 		case 9:
-			Draw_Text_Center(160, 36, 0.5f, -1, "Transfer completed?\nDo you want to transfer again?");
+			DrawStrBoxC(160, 36, 0.5f, -1, "Transfer completed?\nDo you want to transfer again?",300);
 			Draw_Rect(40, 85, 240, 40, GuiButtonColor(buttonSel==0, 1));
 			Draw_Text_Center(160, 95, 0.7f, COLOR_BT_TX_NORMAL, "Yes, continue.");
 			Draw_Rect(40, 135, 240, 40, GuiButtonColor(buttonSel==1, 1));
