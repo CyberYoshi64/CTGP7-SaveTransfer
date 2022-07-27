@@ -190,12 +190,12 @@ DEPENDS	:=	$(OFILES:.o=.d)
 
 APP_TITLE         := CTGP-7 Save Transfer Tool
 APP_TITLE_LONG    := CTGP-7 Save Transfer Tool
-APP_DESCRIPTION   := Let your save be copied between MK7 and CTGP-7!
+APP_DESCRIPTION   := Save Data Copier between CTGP-7 and MK7
 APP_AUTHOR        := CyberYoshi64
 APP_PRODUCT_CODE  := CY64-CMSV
 APP_UNIQUE_ID     := 0x16902
 APP_VERSION_MAJOR := 0
-APP_VERSION_MINOR := 0
+APP_VERSION_MINOR := 1
 APP_VERSION_MICRO := 1
 APP_ROMFS         := $(TOPDIR)/$(ROMFS)
 
@@ -276,7 +276,7 @@ banner.bnr : $(BANNER_IMAGE_FILE) $(BANNER_AUDIO_FILE)
 	@echo built ... $(notdir $@)
 
 icon.icn : $(APP_ICON)
-	@$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_TITLE_LONG)" -p "$(APP_AUTHOR)" -i $(APP_ICON) -o icon.icn > /dev/null
+	@$(BANNERTOOL) makesmdh -s "$(APP_TITLE)" -l "$(APP_TITLE_LONG)" -p "$(APP_AUTHOR)" -i $(APP_ICON) -o icon.icn -f visible,nosavebackups > /dev/null
 	@echo built ... $(notdir $@)
 
 3dsx : $(OUTPUT_FILE).3dsx
