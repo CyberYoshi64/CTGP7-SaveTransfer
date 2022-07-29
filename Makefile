@@ -56,7 +56,7 @@ RSF             := $(TOPDIR)/$(RESOURCES)/ciaprops.rsf
 #---------------------------------------------------------------------------------
 ARCH        := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 COMMON      := -Wall -O2 -mword-relocations -fomit-frame-pointer -ffunction-sections $(ARCH) $(INCLUDE) -D__3DS__
-CFLAGS      := $(COMMON) -std=gnu99 `curl-config --cflags`
+CFLAGS      := $(COMMON) -std=gnu99
 CXXFLAGS    := $(COMMON) -fno-rtti -fno-exceptions -std=gnu++11
 ASFLAGS     := $(ARCH)
 LDFLAGS     = -specs=3dsx.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -64,7 +64,7 @@ LDFLAGS     = -specs=3dsx.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 #---------------------------------------------------------------------------------
 # Libraries needed to link into the executable.
 #---------------------------------------------------------------------------------
-LIBS := -O2 -lm -lctru -lcitro2d -lcitro3d `curl-config --libs` -lcwav -lncsnd
+LIBS := -O2 -lm -lcitro2d -lcitro3d -lctru -lcwav -lncsnd
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

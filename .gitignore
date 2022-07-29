@@ -34,5 +34,6 @@
 *.del
 output/
 build/
+romfs/gfx/
 *.bak
 sheet*.png

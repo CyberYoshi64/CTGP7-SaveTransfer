@@ -30,7 +30,5 @@ extern "C" {
 #include "keyboard.h"
 #include <dirent.h>
 #include <unistd.h>
-#include <curl/curl.h>
-#include <curl/easy.h>
 
 #endif
