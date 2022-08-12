@@ -8,7 +8,9 @@ u8 transferRegion;
 bool transferIsSD;
 u8 trnsfGameCartRegion;
 u8 trnsfAvailRegion;
-bool transferIncludeGhosts;
+bool transferStatistics = true; // user can opt-out
+bool transferIncludeGhosts[TRANSFER_TRACKCOUNT];
+bool transferHasGhosts[TRANSFER_TRACKCOUNT];
 
 u64 transferCurrentSize;
 u32 transferFileProgress;
@@ -74,13 +76,19 @@ void ShowProgress() {
     C3D_FrameEnd(0);
 }
 
-Result writeToCTGP(const char* format, int idxstart, int idxend) {
+Result writeToCTGP(const char* format, int idxstart = 0, int idxend = 0) {
     char buf[FILE_BUF_SIZE];
     std::string path1, path2;
     Result res = 0;
     Handle handle; Handle sdHdl;
+    if (strchr(format, '%') == NULL){
+        sprintf(transferPath, format);
+        idxend = idxstart+1;
+    }
     for (int i=idxstart; i<idxend; i++) {
-        sprintf(transferPath, format, i);
+        if (strchr(format, '%') != NULL) {
+            sprintf(transferPath, format, i);
+        }
         path1 = (std::string)TRANSFER_MK7_PREFIX+transferPath;
         path2 = (std::string)TRANSFER_CTGP7_PREFIX+transferPath;
         remove(("sdmc:"+path2).c_str());
@@ -114,13 +122,19 @@ Result writeToCTGP(const char* format, int idxstart, int idxend) {
     return res;
 }
 
-Result writeToMK7(const char* format, int idxstart, int idxend) {
+Result writeToMK7(const char* format, int idxstart=0, int idxend=0) {
     char buf[FILE_BUF_SIZE];
     std::string path1, path2;
     Result res = 0;
     Handle handle; Handle sdHdl;
+    if (strchr(format, '%') == NULL){
+        sprintf(transferPath, format);
+        idxend = idxstart+1;
+    }
     for (int i=idxstart; i<idxend; i++) {
-        sprintf(transferPath, format, i);
+        if (strchr(format, '%') != NULL) {
+            sprintf(transferPath, format, i);
+        }
         path1 = (std::string)TRANSFER_CTGP7_PREFIX+transferPath;
         path2 = (std::string)TRANSFER_MK7_PREFIX+transferPath;
         FSUSER_DeleteFile(saveArc, fsMakePath(PATH_ASCII, path2.c_str()));
@@ -154,29 +168,59 @@ Result writeToMK7(const char* format, int idxstart, int idxend) {
     return res;
 }
 
+void Transfer::PrePerform(){
+    Handle filehdl;
+    FS_Archive archive;
+    FSUSER_OpenArchive(&archive, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY,""));
+    if (transferMode){
+        for (int i=0; i<TRANSFER_TRACKCOUNT; i++){
+            sprintf(transferPath,TRANSFER_MK7_PREFIX"replay/replay%02d.dat", i);
+            transferHasGhosts[i] = R_SUCCEEDED(FSUSER_OpenFile(&filehdl, saveArc, fsMakePath(PATH_ASCII,transferPath), FS_OPEN_READ, 0));
+            FSFILE_Close(filehdl);
+        }
+    } else {
+        for (int i=0; i<TRANSFER_TRACKCOUNT; i++){
+            sprintf(transferPath,TRANSFER_CTGP7_PREFIX"replay/replay%02d.dat", i);
+            transferHasGhosts[i] = R_SUCCEEDED(FSUSER_OpenFile(&filehdl, archive, fsMakePath(PATH_ASCII,transferPath), FS_OPEN_READ, 0));
+            FSFILE_Close(filehdl);
+        }
+    }
+    FSUSER_CloseArchive(archive);
+}
+
 Result Transfer::Perform(){
     Result res = 0;
     transferCurrentSize=1; transferFileProgress=0;
     sprintf(transferPath, "%c", 0); ShowProgress();
     if (transferMode){
-        for (int i=0; i<10; i++) {
-            sprintf(transferPath, TRANSFER_CTGP7_PREFIX"system%d.dat", i);
-            remove(transferPath);
+        if (transferStatistics){
+            for (int i=0; i<10; i++) {
+               sprintf(transferPath, TRANSFER_CTGP7_PREFIX"system%d.dat", i);
+                remove(transferPath);
+            }
+            if(R_FAILED(res = writeToCTGP("system%d.dat", 0, 10))) return res;
         }
-        if(R_FAILED(res = writeToCTGP("system%d.dat", 0, 10))) return res;
-        if (transferIncludeGhosts) {
-            mkdir("sdmc:" TRANSFER_CTGP7_PREFIX "replay",777);
-            if(R_FAILED(res = writeToCTGP("replay/replay%02d.dat", 0, 32))) return res;
+        mkdir("sdmc:" TRANSFER_CTGP7_PREFIX "replay",777);
+        for (int i=0; i<TRANSFER_TRACKCOUNT; i++) {
+            if (transferIncludeGhosts[i]){
+                sprintf(transferPath, "replay/replay%02d.dat", i);
+                if(R_FAILED(res = writeToCTGP(transferPath))) return res;
+            }
         }
     } else {
-        for (int i=0; i<10; i++) {
-            sprintf(transferPath, TRANSFER_MK7_PREFIX"system%d.dat", i);
-            FSUSER_DeleteFile(saveArc, fsMakePath(PATH_ASCII,transferPath));
+        if (transferStatistics) {
+            for (int i=0; i<10; i++) {
+                sprintf(transferPath, TRANSFER_MK7_PREFIX"system%d.dat", i);
+                FSUSER_DeleteFile(saveArc, fsMakePath(PATH_ASCII,transferPath));
+            }
+            if(R_FAILED(res = writeToMK7("system%d.dat", 0, 10))) return res;
         }
-        if(R_FAILED(res = writeToMK7("system%d.dat", 0, 10))) return res;
-        if (transferIncludeGhosts) {
-            FSUSER_CreateDirectory(saveArc, fsMakePath(PATH_ASCII,TRANSFER_MK7_PREFIX"replay"), FS_ATTRIBUTE_DIRECTORY);
-            if(R_FAILED(res = writeToMK7("replay/replay%02d.dat", 0, 32))) return res;
+        FSUSER_CreateDirectory(saveArc, fsMakePath(PATH_ASCII,TRANSFER_MK7_PREFIX"replay"), FS_ATTRIBUTE_DIRECTORY);
+        for (int i=0; i<TRANSFER_TRACKCOUNT; i++) {
+            if (transferIncludeGhosts[i]){
+                sprintf(transferPath, "replay/replay%02d.dat", i);
+                if(R_FAILED(res = writeToMK7(transferPath))) return res;
+            }
         }
     }
     return res;

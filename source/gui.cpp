@@ -1,5 +1,6 @@
 #include "gui.hpp"
 #include "transfer.hpp"
+#include "mk7courseid.hpp"
 
 static C2D_SpriteSheet gfx_main;
 static C2D_SpriteSheet gfx_region;
@@ -21,7 +22,12 @@ extern u8 transferRegion;
 extern bool transferIsSD;
 extern u8 trnsfGameCartRegion;
 extern u8 trnsfAvailRegion;
-extern bool transferIncludeGhosts;
+extern bool transferStatistics;
+extern bool transferIncludeGhosts[];
+extern bool transferHasGhosts[];
+s8 availGhostList[TRANSFER_TRACKCOUNT + 1];
+size_t availGhostCount;
+s8 availGhostTableOff;
 
 bool fadein = true, fadeout = false;
 s16 fadealpha = 250;
@@ -106,6 +112,21 @@ void Draw_ImageAlpha(C2D_SpriteSheet sheet, size_t key, int x, int y, u8 alpha, 
 void Draw_EndFrame(void) {
 	C2D_TextBufClear(sizeBuf);
 	C3D_FrameEnd(0);
+}
+
+void Gui::Checkmark(float x, float y, u16 align, bool flag, bool selected = 0){
+	float xoff = ((align>>0) & 3)*12;
+	float yoff = ((align>>2) & 3)*12;
+	x -= xoff; y -= yoff;
+	if (selected){
+		Draw_Rect(x, y, 24, 24, flag?COLOR_CK_BG_HOVER:COLOR_BT_BG_HOVER);
+	} else {
+		Draw_Rect(x, y, 24, 24, flag?COLOR_CK_BG_NORMAL:COLOR_BT_BG_NORMAL);
+	}
+	if (flag) {
+		C2D_DrawLine(x+4, y+11, COLOR_CK_TICK_COL, x+10, y+17, COLOR_CK_TICK_COL2, 2, 0.5f);
+		C2D_DrawLine(x+20, y+7, COLOR_CK_TICK_COL, x+10, y+17, COLOR_CK_TICK_COL2, 2, 0.5f);
+	}
 }
 
 void Draw_Text(float x, float y, float size, u32 color, const char *text) {
@@ -199,7 +220,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	touchpx = touch.px; touchpy = touch.py;
 	touchot = touchpt;
 
-	if ((hDown & KEY_START) && appMode < 4 && fadealpha < 128){
+	if ((hDown & KEY_START) && appMode < 8 && fadealpha < 128){
 		exiting=true; SFX::Back();
 		fadecolor=0; fadeout=true;
 	}
@@ -210,14 +231,24 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	}
 
 	C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
-	gcls(top, 0xFF302018);
-	gcls(bottom, 0xFF302018);
+	gcls(top, COLOR_APPBG_TOP);
+	gcls(bottom, COLOR_APPBG_BOT);
 	C2D_SceneBegin(top);
-	Draw_Text_Center(200, 48, 0.6f, 0xFFC08040, "CTGP-7 Save Transfer Tool");
+	Draw_Text_Center(200, 48, 0.6f, COLOR_TTLBNR, "CTGP-7 Save Transfer Tool");
+	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, "v0.2");
 	sprite(gfx_main, gfx_main_mainicon_idx, 128, 80);
 	Draw_Rect(0,0,400,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C2D_SceneBegin(bottom);
 	bool gameCartGood = trnsfGameCartRegion<100;
+	bool anyGhostsAvailable = availGhostCount > 0;
+	bool anyGhostPicked=false; u8 ghostsPicked = 0;
+	if (anyGhostsAvailable) {
+		for (int i=0; i<TRANSFER_TRACKCOUNT; i++) {
+			anyGhostPicked |= transferIncludeGhosts[i];
+			if (transferIncludeGhosts[i]) ghostsPicked++;
+		}
+	}
+	bool pg2cont = anyGhostPicked||transferStatistics;
 	switch (appMode) {
 		case 0:
 			DrawStrBoxC(160, 16, 0.5f, -1, "Which way do you want to transfer?",300);
@@ -230,9 +261,9 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			DrawStrBoxC(160, 16, 0.5f, -1, "Which version of MK7 do you want to choose?",300);
 			Draw_Rect(25, 48, 270, 32, GuiButtonColor(buttonSel==0, gameCartGood));
 			if (trnsfGameCartRegion == 255) {
-				DrawStrBox(60, 56, 0.5f, COLOR_BT_TX_BAD, "Game Card couldn't be detected.", 224);
+				DrawStrBox(60, 56, 0.5f, GuiButtonTextColor(buttonSel==0, gameCartGood), "Game Card couldn't be detected.", 224);
 			} else if (trnsfGameCartRegion == 254) {
-				DrawStrBox(60, 56, 0.5f, COLOR_BT_TX_BAD, "Game Card is not inserted.", 224);
+				DrawStrBox(60, 56, 0.5f, GuiButtonTextColor(buttonSel==0, gameCartGood), "Game Card is not inserted.", 224);
 			} else {
 				DrawStrBox(60, 56, 0.5f, COLOR_BT_TX_NORMAL, ("Game Card ("+Transfer::GetRegionString(trnsfGameCartRegion)+")").c_str(), 224);
 			}
@@ -246,12 +277,43 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			}
 			break;
 		case 3:
-			DrawStrBoxC(160, 16, 0.5f, -1, "Do you want to transfer your ghosts too?\n(Ghosts for original courses only.)",300);
-			Draw_Rect(40, 85, 240, 40, GuiButtonColor(buttonSel==0, 1));
-			Draw_Text_Center(160, 95, 0.75f, COLOR_BT_TX_NORMAL, "Yes");
-			Draw_Rect(40, 135, 240, 40, GuiButtonColor(buttonSel==1, 1));
-			Draw_Text_Center(160, 145, 0.75f, COLOR_BT_TX_NORMAL, "No");
-			DrawStrBoxC(160, 192, 0.5f, 0xC0FFC080, ((std::string)"MK7 version selected: "+Transfer::GetRegionString(transferRegion)+", "+(transferIsSD?"Digital":"Physical")).c_str(),240);
+			if (!transferMode) {
+				DrawStrBoxC(160, 8, 0.5f, -1, "Transfer options\nCTGP-7 to MK7",300);
+			} else {
+				DrawStrBoxC(160, 8, 0.5f, -1, "Transfer options\nMK7 to CTGP-7",300);
+			}
+			sprintf(errorstr,"MK7 version selected: %s (%s)",Transfer::GetRegionString(transferRegion).c_str(), transferIsSD?"Digital":"Physical");
+			DrawStrBoxC(160, 40, 0.5f, -1, errorstr,300);
+			Checkmark(32, 68, 0, transferStatistics, buttonSel==0);
+			Draw_Text(72, 72, .5f, COLOR_BT_TX_NORMAL, "Transfer main save data");
+			Draw_Rect(32, 100, 256, 36, GuiButtonColor(buttonSel==1,anyGhostsAvailable));
+			sprintf(errorstr,"Transfer ghosts (%d selected)",ghostsPicked);
+			DrawStrBox(40, 110, .5f, GuiButtonTextColor(buttonSel==1,anyGhostsAvailable), errorstr, 184);
+			DrawStrBoxCC(256, 118, 0.625f, COLOR_BT_TX_NORMAL, "\u2192", 32, 24);
+			Draw_Rect(32, 160, 256, 48, GuiButtonColor(buttonSel==2,pg2cont));
+			DrawStrBoxC(160, 172, 0.625f, GuiButtonTextColor(1,pg2cont), "Let's go!", 232);
+			break;
+		case 4:
+			DrawStrBoxC(160, 8, 0.5f, -1, "Ghosts to transfer",300);
+			Draw_Rect(32, 180, 256, 36, GuiButtonColor(buttonSel==0,1));
+			DrawStrBoxC(160, 188, 0.5625f, COLOR_BT_TX_NORMAL, "Continue", 232);
+			Draw_Rect( 25,  28, 130, 32, GuiButtonColor(buttonSel==1,1));
+			Draw_Rect(165,  28, 130, 32, GuiButtonColor(buttonSel==2,1));
+			DrawStrBoxCC(90, 42, .5f, COLOR_BT_TX_NORMAL, "Unselect all", 120, 36);
+			DrawStrBoxCC(230, 42, .5f, COLOR_BT_TX_NORMAL, "Select all", 120, 36);
+			Draw_Rect(256,  88, 36, 36, GuiButtonColor(buttonSel==3,1));
+			DrawStrBoxCC(272, 106, 0.625f, COLOR_BT_TX_NORMAL, "\u2191", 36, 36);
+			Draw_Rect(256, 128, 36, 36, GuiButtonColor(buttonSel==4,1));
+			DrawStrBoxCC(272, 146, 0.625f, COLOR_BT_TX_NORMAL, "\u2193", 36, 36);
+			for (size_t i=0; i<4; i++){
+				bool k = (availGhostTableOff+i < availGhostCount) && (availGhostList[availGhostTableOff+i]>=0);
+				if (k) {
+					Checkmark(24,64+i*28,0,transferIncludeGhosts[availGhostList[availGhostTableOff+i]],buttonSel==5+i);
+					DrawStrBox(60, 68+i*28, .5f, COLOR_BT_TX_NORMAL, CTRDash::Course::GetHumanName(availGhostList[availGhostTableOff+i]), 172);
+				} else {
+					Checkmark(24,64+i*28,0,0,buttonSel==5+i);
+				}
+			}
 			break;
 		case 9:
 			DrawStrBoxC(160, 36, 0.5f, -1, "Transfer completed?\nDo you want to transfer again?",300);
@@ -261,9 +323,9 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			Draw_Text_Center(160, 145, 0.7f, COLOR_BT_TX_NORMAL, "No, exit.");
 			break;
 	}
-	if (appMode < 4)
+	if (appMode < 8)
 		Draw_Text_Right(310, 220, 0.5f, 0x80FFFFFF, "\uE073HOME/START ー Exit");
-	if (appMode > 0 && appMode < 4)
+	if (appMode > 0 && appMode < 8)
 		Draw_Text(10, 220, 0.5f, 0x80FFFFFF, "\uE001 Back");
 	Draw_Rect(0,0,320,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C3D_FrameEnd(0);
@@ -347,19 +409,125 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 					transferIsSD = (buttonSel > 0);
 					if (buttonSel>1) transferRegion = buttonSel-1;
 					if (!buttonSel) transferRegion = trnsfGameCartRegion;
+					Transfer::Init();
+					Transfer::PrePerform();
+					memset(&transferIncludeGhosts, 0, TRANSFER_TRACKCOUNT);
+					memset(&availGhostList, -1, sizeof(availGhostList));
+					size_t i = 0;
+					availGhostCount = availGhostTableOff = 0;
+					for (i=0; i<TRANSFER_TRACKCOUNT; i++){
+						if (transferHasGhosts[i])
+							availGhostList[availGhostCount++] = i;
+					}
+					Transfer::Exit();
 					appMode=3;
 				}
 				break;
 			case 3:
-				if (dirv) buttonSel = !buttonSel;
+				if (dirv) buttonSel += dirv;
+				if (buttonSel<0) buttonSel=2;
+				buttonSel %= 3;
+
 				if (hDown & BUTTON_OK) sel=true;
-				if (touchedArea(touchpx, touchpy, 40, 95, 240, 40) && touchpt && !touchot){buttonSel=0; sel=1;}
-				if (touchedArea(touchpx, touchpy, 40, 135, 240, 40) && touchpt && !touchot){buttonSel=1; sel=1;}
-				if (sel) {
-					transferIncludeGhosts = !buttonSel; SFX::Accept(); appMode=8;
+				if (touchedArea(touchpx,touchpy,24,60,256,40) && !touchot){
+					sel=true; buttonSel=0;
+				}
+				if (touchedArea(touchpx,touchpy,24,100,272,48) && !touchot){
+					sel=true; buttonSel=1;
+				}
+				if (touchedArea(touchpx,touchpy,24,156,272,48) && !touchot){
+					sel=true; buttonSel=2;
+				}
+				if (sel){
+					switch (buttonSel){
+						case 0:
+							transferStatistics = !transferStatistics;
+							break;
+						case 1:
+							if (anyGhostsAvailable) {
+								appMode = 4; SFX::Accept();
+							} else {
+								errorcode=-1;
+								sprintf(errorstr,"There isn't any ghost data you can transfer.\n\nMake sure that you chose the correct options.");
+							}
+							break;
+						case 2:
+							if (pg2cont){
+								appMode = 8; SFX::Accept();
+							} else {
+								errorcode=-1;
+								sprintf(errorstr,"You are not transferring anything.\nPick \"Transfer main save data\" or pick some course ghosts.");
+							}
+							break;
+					}
 				}
 				if (hDown & BUTTON_BACK) {
 					appMode = 2; SFX::Back();
+				}
+				break;
+			case 4:
+				if (hDown & BUTTON_BACK) {
+					appMode = 3; SFX::Back();
+				}
+				if (hDown & BUTTON_OK) sel=true;
+				if (dir) {
+					if (hDown & KEY_DOWN) {
+						buttonSel++;
+						if (buttonSel == 2) buttonSel = 5;
+					} else if (hDown & KEY_UP) {
+						buttonSel--;
+						if (buttonSel == 4) buttonSel = 1;
+					} else if (hDown & KEY_LEFT) {
+						if (buttonSel == 2) buttonSel--;
+						if (buttonSel == 3) buttonSel=5;
+						if (buttonSel == 4) buttonSel=7;
+					} else if (hDown & KEY_RIGHT) {
+						if (buttonSel == 1) buttonSel++;
+						if (buttonSel == 5) buttonSel=3;
+						if (buttonSel == 6) buttonSel=3;
+						if (buttonSel == 7) buttonSel=4;
+						if (buttonSel == 8) buttonSel=4;
+					}
+				}
+				if (touchpt && !touchot) {
+					if (touchedArea(touchpx,touchpy, 32,180,256, 36)){sel=true; buttonSel=0;}
+					if (touchedArea(touchpx,touchpy, 25, 28,130, 32)){sel=true; buttonSel=1;}
+					if (touchedArea(touchpx,touchpy,165, 28,130, 32)){sel=true; buttonSel=2;}
+					if (touchedArea(touchpx,touchpy,256, 88, 36, 36)){sel=true; buttonSel=3;}
+					if (touchedArea(touchpx,touchpy,256,128, 36, 36)){sel=true; buttonSel=4;}
+					if (touchedArea(touchpx,touchpy, 24, 64,200, 24)){sel=true; buttonSel=5;}
+					if (touchedArea(touchpx,touchpy, 24, 92,200, 24)){sel=true; buttonSel=6;}
+					if (touchedArea(touchpx,touchpy, 24,120,200, 24)){sel=true; buttonSel=7;}
+					if (touchedArea(touchpx,touchpy, 24,148,200, 24)){sel=true; buttonSel=8;}
+				}
+				if (buttonSel<0) buttonSel=8;
+				buttonSel %= 9;
+				if (sel){
+					if (buttonSel == 0) {
+						appMode = 3; SFX::Accept();
+					} else if (buttonSel == 1) {
+						size_t i=0; while (true) {
+							if ((i>=availGhostCount)||(availGhostList[i]<0)) break;
+							transferIncludeGhosts[availGhostList[i++]] = false;
+						}
+					} else if (buttonSel == 2) {
+						size_t i=0; while (true) {
+							if ((i>=availGhostCount)||(availGhostList[i]<0)) break;
+							transferIncludeGhosts[availGhostList[i++]] = true;
+						}
+					} else if (buttonSel == 3) {
+						availGhostTableOff -= 4;
+						if (availGhostTableOff < 0)
+							availGhostTableOff = (int)((availGhostCount-1)/4)*4;
+					} else if (buttonSel == 4) {
+						availGhostTableOff += 4;
+						if (availGhostTableOff >= availGhostCount)
+							availGhostTableOff = 0;
+					} else if (buttonSel < 9) {
+						size_t i = availGhostTableOff + buttonSel - 5;
+						if ((i<availGhostCount)&&(availGhostList[i]>=0))
+							transferIncludeGhosts[availGhostList[i]] = !transferIncludeGhosts[availGhostList[i]];
+					}
 				}
 				break;
 			case 8:

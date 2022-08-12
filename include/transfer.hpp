@@ -2,7 +2,9 @@
 
 #include "common.hpp"
 
-#define FILE_BUF_SIZE   8192
+#define FILE_BUF_SIZE   16384
+
+#define TRANSFER_TRACKCOUNT 32
 
 #define TRANSFER_REGION_JPN 0
 #define TRANSFER_REGION_EUR 1
@@ -32,5 +34,7 @@ namespace Transfer {
     Result Init();
     Result Perform();
     void ProbeVersions();
+    void GetTrackName(u8 id);
     void Exit();
+    void PrePerform();
 }

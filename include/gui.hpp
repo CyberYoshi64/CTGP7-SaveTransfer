@@ -31,13 +31,24 @@
 #include "gfx_main.h"
 #include "gfx_region.h"
 
-#define COLOR_BT_BG_BAD		0xFF402C1C
+#define COLOR_APPBG_TOP		0xFF200C08
+#define COLOR_APPBG_BOT		0xFF302018
+#define COLOR_TTLBNR	0xFFC08040
+#define COLOR_VERBNR	0xFF80A020
+#define COLOR_BT_BG_BAD_N	0xFF402C1C
+#define COLOR_BT_BG_BAD_H	0xFF48301C
 #define COLOR_BT_BG_NORMAL	0xFF503820
 #define COLOR_BT_BG_HOVER	0xFF805038
-#define COLOR_BT_TX_NORMAL	-1
-#define COLOR_BT_TX_BAD	0xFF805038
-#define GuiButtonColor(h,d)		d?(h?COLOR_BT_BG_HOVER:COLOR_BT_BG_NORMAL):COLOR_BT_BG_BAD
-#define GuiButtonTextColor(h,d)	d?COLOR_BT_TX_NORMAL:COLOR_BT_TX_BAD
+#define COLOR_BT_TX_NORMAL	0xFFFFFFFF
+#define COLOR_BT_TX_HOVER	0xFFFFFFFF
+#define COLOR_BT_TX_BAD_N	0xFF805038
+#define COLOR_BT_TX_BAD_H	0xFFA08050
+#define COLOR_CK_BG_NORMAL	0xFF208040
+#define COLOR_CK_BG_HOVER	0xFF60A030
+#define COLOR_CK_TICK_COL	0xFFFFFFFF
+#define COLOR_CK_TICK_COL2	0xFF90C078
+#define GuiButtonColor(h,d)		d?(h?COLOR_BT_BG_HOVER:COLOR_BT_BG_NORMAL):(h?COLOR_BT_BG_BAD_H:COLOR_BT_BG_BAD_N)
+#define GuiButtonTextColor(h,d)	d?(h?COLOR_BT_TX_HOVER:COLOR_BT_TX_NORMAL):(h?COLOR_BT_TX_BAD_H:COLOR_BT_TX_BAD_N)
 
 #define BUTTON_OK KEY_A
 #define BUTTON_BACK KEY_B
@@ -55,6 +66,7 @@ namespace Gui {
 	void DrawScreen(void);
 	void ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch);
 	void fadeEffects(void);
+	void Checkmark(float x, float y, u16 align, bool flag, bool selected);
 }
 void Draw_ImageBlend(C2D_SpriteSheet sheet, size_t key, int x, int y, u32 color, float sx = 1, float sy = 1);
 void Draw_ImageAlpha(C2D_SpriteSheet sheet, size_t key, int x, int y, u8 alpha, float sx = 1, float sy = 1);
