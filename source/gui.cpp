@@ -64,14 +64,14 @@ Result Gui::init(void) {
 	sizeBuf		= C2D_TextBufNew(4096);
 	gfx_main	= C2D_SpriteSheetLoad("romfs:/gfx/gfx_main.t3x");
 	gfx_region	= C2D_SpriteSheetLoad("romfs:/gfx/gfx_region.t3x");
-	systemFont	= C2D_FontLoadSystem(CFG_REGION_EUR);
+	systemFont	= NULL;
 	return 0;
 }
 void Gui::exit(void) {
 	if (gfx_main) C2D_SpriteSheetFree(gfx_main);
 	if (gfx_region) C2D_SpriteSheetFree(gfx_region);
 	C2D_TextBufDelete(sizeBuf);
-	C2D_FontFree(systemFont);
+	//C2D_FontFree(systemFont);
 	C2D_Fini();
 	C3D_Fini();
 }
