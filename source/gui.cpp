@@ -291,7 +291,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			DrawStrBox(40, 110, .5f, GuiButtonTextColor(buttonSel==1,anyGhostsAvailable), errorstr, 184);
 			DrawStrBoxCC(256, 118, 0.625f, COLOR_BT_TX_NORMAL, "\u2192", 32, 24);
 			Draw_Rect(32, 160, 256, 48, GuiButtonColor(buttonSel==2,pg2cont));
-			DrawStrBoxC(160, 172, 0.625f, GuiButtonTextColor(1,pg2cont), "Let's go!", 232);
+			DrawStrBoxC(160, 172, 0.625f, GuiButtonTextColor(buttonSel==2,pg2cont), "Let's go!", 232);
 			break;
 		case 4:
 			DrawStrBoxC(160, 8, 0.5f, -1, "Ghosts to transfer",300);
@@ -351,7 +351,11 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 				appMode = 2; break;
 			case 2:
 				if ((maincnt % 30)==0) Transfer::ProbeVersions();
-				while (dir) {
+				if (hDown & BUTTON_OK) sel=1;
+				if (hDown & BUTTON_BACK) {
+					appMode = 0; SFX::Back();
+				}
+				if (dir) {
 					if (buttonSel == 0) {
 						buttonSel += dirv;
 						if (hDown & KEY_RIGHT) buttonSel=2;
@@ -362,47 +366,41 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 						if (buttonSel < 0) buttonSel=0;
 						if (buttonSel > TRANSFER_REGION_TOTAL) buttonSel=0;
 					}
-					if (buttonSel==0 && trnsfGameCartRegion < 100) break;
-					if (buttonSel >0 && ((trnsfAvailRegion>>(buttonSel-1))&1)) break;
-					pg2while1--;
-					if (!pg2while1) break;
 				}
 				for (u8 i=0; i < TRANSFER_REGION_TOTAL; i++){
 					if (touchedArea(touchpx, touchpy, 25+(i%2)*140, 90+(i/2)*40, 130, 32) && !touchot){
-						if ((trnsfAvailRegion>>i)&1) {
-							buttonSel=1+i; sel=1; break;
-						} else {
-							errorcode=-1;
-							sprintf(errorstr,"This version of Mario Kart 7 couldn't be detected. Probably because you do not have it.");
-						}
-						break;
+						buttonSel=1+i; sel=true; break;
 					}
 				}
-				if (touchedArea(touchpx, touchpy, 25, 48, 270, 32) && !touchot) {
-					if (gameCartGood){
-						buttonSel=0; sel=1;
+				if (touchedArea(touchpx, touchpy, 25, 48, 270, 32) && !touchot){
+					buttonSel=0; sel=true;
+				}
+				if (sel){
+					if (buttonSel==0){
+						if (!gameCartGood){
+							errorcode=-1; sel=false;
+							if (trnsfGameCartRegion == 255) {
+								sprintf(errorstr,
+								"The game cart cannot be used.\n\n"
+								"Try taking the game cart out and reinsert it.\n"
+								"The game cart might not be detected, it could be dirty or damaged.\n"
+								"Make sure, you insert a Mario Kart 7 cart, that is a final release.\n"
+								"Other games, as well as kiosk and debug builds are not supported."
+								);
+							} else {
+								sprintf(errorstr,
+								"The game cart cannot be detected.\n"
+								"Did you insert a game cart in it?\n\n"
+								"The game cart might be damaged or is dirty. Try removing and reinserting the game cart and try again."
+								);
+							}
+						}
 					} else {
-						errorcode=-1;
-						if (trnsfGameCartRegion == 255) {
-							sprintf(errorstr,
-							"The game cart cannot be used.\n\n"
-							"Try taking the game cart out and reinsert it.\n"
-							"The game cart might not be detected, it could be dirty or damaged.\n"
-							"Make sure, you insert a Mario Kart 7 cart, that is a final release.\n"
-							"Other games, as well as kiosk and debug builds are not supported."
-							);
-						} else {
-							sprintf(errorstr,
-							"The game cart cannot be detected.\n"
-							"Did you insert a game cart in it?\n\n"
-							"The game cart might be damaged or is dirty. Try removing and reinserting the game cart and try again."
-							);
+						if(!((trnsfAvailRegion>>(buttonSel-1))&1)){
+							errorcode=-1; sel=false;
+							sprintf(errorstr,"This version of Mario Kart 7 couldn't be detected.\nYou might not own it or it was modified.");
 						}
 					}
-				}
-				if (hDown & BUTTON_OK) sel=1;
-				if (hDown & BUTTON_BACK) {
-					appMode = 0; SFX::Back();
 				}
 				if (sel) {
 					SFX::Accept();
