@@ -235,7 +235,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	gcls(bottom, COLOR_APPBG_BOT);
 	C2D_SceneBegin(top);
 	Draw_Text_Center(200, 48, 0.6f, COLOR_TTLBNR, "CTGP-7 Save Transfer Tool");
-	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, "v0.2");
+	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, "v0.2r1");
 	sprite(gfx_main, gfx_main_mainicon_idx, 128, 80);
 	Draw_Rect(0,0,400,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C2D_SceneBegin(bottom);

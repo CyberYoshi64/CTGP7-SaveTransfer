@@ -190,13 +190,13 @@ DEPENDS	:=	$(OFILES:.o=.d)
 
 APP_TITLE         := CTGP-7 Save Transfer Tool
 APP_TITLE_LONG    := CTGP-7 Save Transfer Tool
-APP_DESCRIPTION   := Save Data Copier between CTGP-7 and MK7
+APP_DESCRIPTION   := Save Data Copier between CTGP-7 & MK7
 APP_AUTHOR        := CyberYoshi64
 APP_PRODUCT_CODE  := CY64-CMSV
 APP_UNIQUE_ID     := 0x16902
 APP_VERSION_MAJOR := 0
 APP_VERSION_MINOR := 2
-APP_VERSION_MICRO := 0
+APP_VERSION_MICRO := 1
 APP_ROMFS         := $(TOPDIR)/$(ROMFS)
 
 ifneq ("$(wildcard $(TOPDIR)/$(BANNER_IMAGE).cgfx)","")
