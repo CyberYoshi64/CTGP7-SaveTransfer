@@ -71,7 +71,7 @@ namespace CTRDash {
             case 23: return "DS Waluigi Pinball";
             case 24: return "GCN Dino Dino Jungle";
             case 25: return "GCN Daisy Cruiser";
-            case 26: return "GCN Luigi Circuit";
+            case 26: return "N64 Luigi Circuit";
             case 27: return "N64 Kalimari Desert";
             case 28: return "N64 Koopa Troopa Beach";
             case 29: return "GBA Bowser Castle 1";
