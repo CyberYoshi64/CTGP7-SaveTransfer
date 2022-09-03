@@ -25,6 +25,7 @@ extern u8 trnsfAvailRegion;
 extern bool transferStatistics;
 extern bool transferIncludeGhosts[];
 extern bool transferHasGhosts[];
+extern u8 transferIsViable;
 s8 availGhostList[TRANSFER_TRACKCOUNT + 1];
 size_t availGhostCount;
 s8 availGhostTableOff;
@@ -235,7 +236,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	gcls(bottom, COLOR_APPBG_BOT);
 	C2D_SceneBegin(top);
 	Draw_Text_Center(200, 48, 0.6f, COLOR_TTLBNR, "CTGP-7 Save Transfer Tool");
-	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, "v0.2r1");
+	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, "v0.3");
 	sprite(gfx_main, gfx_main_mainicon_idx, 128, 80);
 	Draw_Rect(0,0,400,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C2D_SceneBegin(bottom);
@@ -258,7 +259,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			Draw_Text_Center(160, 145, 0.75f, COLOR_BT_TX_NORMAL, "MK7 \uE019 CTGP-7");
 			break;
 		case 2:
-			DrawStrBoxC(160, 16, 0.5f, -1, "Which version of MK7 do you want to choose?",300);
+			DrawStrBoxC(160, 16, 0.5f, COLOR_APPTX, "Which version of MK7 do you want to choose?",300);
 			Draw_Rect(25, 48, 270, 32, GuiButtonColor(buttonSel==0, gameCartGood));
 			if (trnsfGameCartRegion == 255) {
 				DrawStrBox(60, 56, 0.5f, GuiButtonTextColor(buttonSel==0, gameCartGood), "Game Card couldn't be detected.", 224);
@@ -278,12 +279,12 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			break;
 		case 3:
 			if (!transferMode) {
-				DrawStrBoxC(160, 8, 0.5f, -1, "Transfer options\nCTGP-7 to MK7",300);
+				DrawStrBoxC(160, 8, 0.5f, COLOR_APPTX, "Transfer options\nCTGP-7 to MK7",300);
 			} else {
-				DrawStrBoxC(160, 8, 0.5f, -1, "Transfer options\nMK7 to CTGP-7",300);
+				DrawStrBoxC(160, 8, 0.5f, COLOR_APPTX, "Transfer options\nMK7 to CTGP-7",300);
 			}
 			sprintf(errorstr,"MK7 version selected: %s (%s)",Transfer::GetRegionString(transferRegion).c_str(), transferIsSD?"Digital":"Physical");
-			DrawStrBoxC(160, 40, 0.5f, -1, errorstr,300);
+			DrawStrBoxC(160, 40, 0.5f, COLOR_APPTX, errorstr,300);
 			Checkmark(32, 68, 0, transferStatistics, buttonSel==0);
 			Draw_Text(72, 72, .5f, COLOR_BT_TX_NORMAL, "Transfer main save data");
 			Draw_Rect(32, 100, 256, 36, GuiButtonColor(buttonSel==1,anyGhostsAvailable));
@@ -294,7 +295,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			DrawStrBoxC(160, 172, 0.625f, GuiButtonTextColor(buttonSel==2,pg2cont), "Let's go!", 232);
 			break;
 		case 4:
-			DrawStrBoxC(160, 8, 0.5f, -1, "Ghosts to transfer",300);
+			DrawStrBoxC(160, 8, 0.5f, COLOR_APPTX, "Ghosts to transfer",300);
 			Draw_Rect(32, 180, 256, 36, GuiButtonColor(buttonSel==0,1));
 			DrawStrBoxC(160, 188, 0.5625f, COLOR_BT_TX_NORMAL, "Continue", 232);
 			Draw_Rect( 25,  28, 130, 32, GuiButtonColor(buttonSel==1,1));
@@ -309,14 +310,14 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 				bool k = (availGhostTableOff+i < availGhostCount) && (availGhostList[availGhostTableOff+i]>=0);
 				if (k) {
 					Checkmark(24,64+i*28,0,transferIncludeGhosts[availGhostList[availGhostTableOff+i]],buttonSel==5+i);
-					DrawStrBox(60, 68+i*28, .5f, COLOR_BT_TX_NORMAL, CTRDash::Course::GetHumanName(availGhostList[availGhostTableOff+i]), 172);
+					DrawStrBox(60, 68+i*28, .5f, COLOR_APPTX, CTRDash::Course::GetHumanName(availGhostList[availGhostTableOff+i]), 172);
 				} else {
 					Checkmark(24,64+i*28,0,0,buttonSel==5+i);
 				}
 			}
 			break;
 		case 9:
-			DrawStrBoxC(160, 36, 0.5f, -1, "Transfer completed?\nDo you want to transfer again?",300);
+			DrawStrBoxC(160, 36, 0.5f, COLOR_APPTX, "Transfer completed?\nDo you want to transfer again?",300);
 			Draw_Rect(40, 85, 240, 40, GuiButtonColor(buttonSel==0, 1));
 			Draw_Text_Center(160, 95, 0.7f, COLOR_BT_TX_NORMAL, "Yes, continue.");
 			Draw_Rect(40, 135, 240, 40, GuiButtonColor(buttonSel==1, 1));
@@ -324,9 +325,9 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 			break;
 	}
 	if (appMode < 8)
-		Draw_Text_Right(310, 220, 0.5f, 0x80FFFFFF, "\uE073HOME/START ー Exit");
+		Draw_Text_Right(310, 220, 0.5f, COLOR_HINT_TX, "\uE073HOME/START ー Exit");
 	if (appMode > 0 && appMode < 8)
-		Draw_Text(10, 220, 0.5f, 0x80FFFFFF, "\uE001 Back");
+		Draw_Text(10, 220, 0.5f, COLOR_HINT_TX, "\uE001 Back");
 	Draw_Rect(0,0,320,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C3D_FrameEnd(0);
 	if (!exiting && !fadeout){
@@ -343,6 +344,10 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 				if (touchedArea(touchpx, touchpy, 40, 135, 240, 40) && touchpt && !touchot){buttonSel=1; sel=1;}
 				if (sel) {
 					transferMode = !!buttonSel; SFX::Accept(); appMode=1;
+					if (access("sdmc:/CTGP-7/config/version.bin", F_OK) == -1){
+						errorcode=-1; exiting=true; fadeout=true;
+						sprintf(errorstr, "CTGP-7 is either not installed or its version is not supported.\n\nThis application will now close.");
+					}
 				}
 				break;
 			case 1:
@@ -407,18 +412,28 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 					transferIsSD = (buttonSel > 0);
 					if (buttonSel>1) transferRegion = buttonSel-1;
 					if (!buttonSel) transferRegion = trnsfGameCartRegion;
-					Transfer::Init();
-					Transfer::PrePerform();
-					memset(&transferIncludeGhosts, 0, TRANSFER_TRACKCOUNT);
-					memset(&availGhostList, -1, sizeof(availGhostList));
-					size_t i = 0;
-					availGhostCount = availGhostTableOff = 0;
-					for (i=0; i<TRANSFER_TRACKCOUNT; i++){
-						if (transferHasGhosts[i])
-							availGhostList[availGhostCount++] = i;
+					if (R_SUCCEEDED(Transfer::Init())){
+						Transfer::PrePerform();
+						if ((transferIsViable>>transferMode)&1){
+							appMode=3;
+							memset(&transferIncludeGhosts, 0, TRANSFER_TRACKCOUNT);
+							memset(&availGhostList, -1, sizeof(availGhostList));
+							size_t i = 0;
+							availGhostCount = availGhostTableOff = 0;
+							for (i=0; i<TRANSFER_TRACKCOUNT; i++){
+								if (transferHasGhosts[i])
+									availGhostList[availGhostCount++] = i;
+							}
+						} else {
+							errorcode=-1;
+							sprintf(errorstr,"Cannot start the transfer. The following save data is missing:\n%s%s\nMake sure you have run the games at least once to ensure the save data is created.",
+							(transferIsViable & 1)?"":"- CTGP-7\n", (transferIsViable & 2)?"":"- Mario Kart 7\n");
+						}
+					} else {
+						errorcode=-1;
+						sprintf(errorstr,"The save data does not exist.\n\nPlease ensure to run Mario Kart 7 at least once, so it can create the save data.");
 					}
 					Transfer::Exit();
-					appMode=3;
 				}
 				break;
 			case 3:
@@ -535,24 +550,35 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 					sprintf(errorstr,
 						"Unable to initialize the transfer.\n"
 						"Error code: 0x%08lX\n"
-						"Tried with MK7 (%s, %s)\n\n"
+						"MK7 type: %s, %s\n"
+						"Transferring %s\n\n"
+						"Some things to check:"
 						"- Is CTGP-7 installed?\n"
 						"- Was the medium removed?\n"
 						"- Was Mario Kart 7 and CTGP-7 launched at least once?\n\n"
 						"Should issues persist, try contacting CyberYoshi64.\n\n"
-						,res,Transfer::GetRegionString(transferRegion).c_str(),transferIsSD?"Digital":"Physical");
+						,res
+						,Transfer::GetRegionString(transferRegion).c_str()
+						,transferIsSD?"Digital":"Physical"
+						,transferMode?"MK7 \uE019 CTGP-7":"CTGP-7 \uE019 MK7");
 				} else {
 					if (R_FAILED(res=Transfer::Perform())){
 						errorcode=-1;
 						sprintf(errorstr,
-						"Failed completing the transfer.\n\n"
+						"The transfer failed.\n\n"
 						"Error code: 0x%08lX\n"
-						"Type: %s, %s\n"
-						"File: %s\n"
-						"If this issue persists, look up the below error code in the Nintendo Homebrew Discord server."
+						"MK7 type: %s, %s\n"
+						"Transferring %s\n"
+						"File: %s\n\n"
+						"Common solutions:\n"
+						"- Run each Mario Kart 7 and CTGP-7 once more\n"
+						"- Clean the contacts of the game cart\n\n"
+						"If issues don't resolve, try resetting the save data of the target game."
 						,res
 						,Transfer::GetRegionString(transferRegion).c_str()
-						,transferIsSD?"Digital":"Physical",transferPath);
+						,transferIsSD?"Digital":"Physical"
+						,transferMode?"MK7 \uE019 CTGP-7":"CTGP-7 \uE019 MK7"
+						,transferPath);
 					} else {
 						SFX::Success(); appMode=9;
 					}

@@ -37,4 +37,5 @@ namespace Transfer {
     void GetTrackName(u8 id);
     void Exit();
     void PrePerform();
+    bool isConfigVerOK(char* fvc);
 }

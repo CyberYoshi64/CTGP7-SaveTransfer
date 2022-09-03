@@ -23,7 +23,7 @@ int main() {
 	romfsInit();
 	gfxInitDefault();
 	Gui::init();
-	osSetSpeedupEnable(true);	// Enable speed-up for New 3DS users
+	osSetSpeedupEnable(true);
 
  	if (access("sdmc:/3ds/dspfirm.cdc", F_OK ) != -1 ) { // Was DSP firm dumped before?
 		ndspInit(); // If so, then initialise the service

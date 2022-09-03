@@ -11,6 +11,7 @@ u8 trnsfAvailRegion;
 bool transferStatistics = true; // user can opt-out
 bool transferIncludeGhosts[TRANSFER_TRACKCOUNT];
 bool transferHasGhosts[TRANSFER_TRACKCOUNT];
+u8 transferIsViable = 0;
 
 u64 transferCurrentSize;
 u32 transferFileProgress;
@@ -65,13 +66,13 @@ void ShowProgress() {
 	Gui::clearTextBufs();
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
     C2D_SceneBegin(bottom);
-    Draw_Rect(0,0,320,240,0xFF302018);
-	DrawStrBoxCC(160, 100, 0.5625f, -1, "The transfer is currently in progress.\n\nPlease do not remove the SD and/or game card\nand don't press the POWER button.", 272, 200);
-    Draw_Rect(0,200,320,40,0x80000000);
+    Draw_Rect(0,0,320,240,COLOR_APPBG_BOT);
+	DrawStrBoxCC(160, 100, 0.5625f, COLOR_APPTX, "The transfer is currently in progress.\n\nPlease do not remove the SD and/or game card\nand don't press the POWER button.", 272, 200);
+    Draw_Rect(0,200,320,40,0xA0000000);
     char str[512];
     sprintf(str,"Copying %s ... (%.1f KiB / %.1f KiB)", transferPath, (u32)transferFileProgress/1024.f, (u32)transferCurrentSize/1024.f);
     DrawStrBoxC(160, 204, 0.45f, 0x7FFFFFFF, str, 280);
-    Draw_Rect(40,224,240,12,0xFF000000);
+    Draw_Rect(40,224,240,12,0xFF382008);
     Draw_Rect(40,224,240 * C2D_Clamp((float)transferFileProgress / transferCurrentSize, 0, 1),12,0xFF408000);
     C3D_FrameEnd(0);
 }
@@ -169,9 +170,24 @@ Result writeToMK7(const char* format, int idxstart=0, int idxend=0) {
 }
 
 void Transfer::PrePerform(){
-    Handle filehdl;
+    Handle filehdl; transferIsViable = 0;
+    bool mk7ok = false, ctgp7ok = false;
     FS_Archive archive;
     FSUSER_OpenArchive(&archive, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY,""));
+    for (int i=0; i<10; i++){
+        sprintf(transferPath,TRANSFER_MK7_PREFIX"system%d.dat", i);
+        if (R_SUCCEEDED(FSUSER_OpenFile(&filehdl, saveArc, fsMakePath(PATH_ASCII,transferPath), FS_OPEN_READ, 0)))
+            mk7ok = true;
+        FSFILE_Close(filehdl);
+    }
+    for (int i=0; i<10; i++){
+        sprintf(transferPath,TRANSFER_CTGP7_PREFIX"system%d.dat", i);
+        if (R_SUCCEEDED(FSUSER_OpenFile(&filehdl, archive, fsMakePath(PATH_ASCII,transferPath), FS_OPEN_READ, 0)))
+            ctgp7ok = true;
+        FSFILE_Close(filehdl);
+    }
+    transferIsViable = ((ctgp7ok) | (mk7ok<<1));
+    if(transferIsViable == 0) return;
     if (transferMode){
         for (int i=0; i<TRANSFER_TRACKCOUNT; i++){
             sprintf(transferPath,TRANSFER_MK7_PREFIX"replay/replay%02d.dat", i);
@@ -265,4 +281,8 @@ void Transfer::ProbeVersions(){
 void Transfer::Exit(){
     FSUSER_ControlArchive(saveArc, ARCHIVE_ACTION_COMMIT_SAVE_DATA, nullptr, 0, nullptr, 0);
 	FSUSER_CloseArchive(saveArc);
+}
+
+bool Transfer::isConfigVerOK(char* fvc){
+    return true;
 }
