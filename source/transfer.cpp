@@ -8,6 +8,7 @@ u8 transferRegion;
 bool transferIsSD;
 u8 trnsfGameCartRegion;
 u8 trnsfAvailRegion;
+bool mk7hasCTGhosts = false;
 bool transferStatistics = true; // user can opt-out
 bool transferIncludeGhosts[TRANSFER_TRACKCOUNT];
 bool transferHasGhosts[TRANSFER_TRACKCOUNT];
@@ -62,6 +63,7 @@ Result Transfer::Init(){
 }
 
 void ShowProgress() {
+    if (transferCurrentSize < 1) transferCurrentSize = 1;
     extern C3D_RenderTarget* bottom;
 	Gui::clearTextBufs();
     C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
@@ -111,7 +113,6 @@ Result writeToCTGP(const char* format, int idxstart = 0, int idxend = 0) {
                 }
                 FSFILE_Flush(sdHdl);
                 FSFILE_Close(sdHdl);
-                FSUSER_ControlArchive(saveArc, ARCHIVE_ACTION_COMMIT_SAVE_DATA, nullptr, 0, nullptr, 0);
             }
             FSFILE_Close(handle);
             if (R_FAILED(res)) break;
@@ -125,9 +126,9 @@ Result writeToCTGP(const char* format, int idxstart = 0, int idxend = 0) {
 
 Result writeToMK7(const char* format, int idxstart=0, int idxend=0) {
     char buf[FILE_BUF_SIZE];
-    std::string path1, path2;
     Result res = 0;
     Handle handle; Handle sdHdl;
+    std::string path1, path2;
     if (strchr(format, '%') == NULL){
         sprintf(transferPath, format);
         idxend = idxstart+1;
@@ -169,10 +170,41 @@ Result writeToMK7(const char* format, int idxstart=0, int idxend=0) {
     return res;
 }
 
+Result toSD(std::string fname, const char* dirname){
+    std::string path1, path2; char buf[FILE_BUF_SIZE];
+    Result res; Handle handle; Handle sdHdl;
+    path1 = fname;
+    path2 = (std::string)dirname+fname;
+    remove(("sdmc:"+path2).c_str());
+    res = FSUSER_OpenFile(&handle, saveArc, fsMakePath(PATH_ASCII, path1.c_str()), FS_OPEN_READ, 0);
+    if (R_SUCCEEDED(res)) {
+        FSFILE_GetSize(handle, &transferCurrentSize);
+        res = FSUSER_OpenFileDirectly(&sdHdl, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY,""), fsMakePath(PATH_ASCII, path2.c_str()), FS_OPEN_CREATE|FS_OPEN_WRITE, FS_ATTRIBUTE_ARCHIVE);
+        u64 total = 0; u32 byteread = 0, bytewritten = 0;
+        if (R_SUCCEEDED(res)){
+            while (total < transferCurrentSize) {
+                res = FSFILE_Read(handle, &byteread, total, buf, FILE_BUF_SIZE);
+                do {
+                    res = FSFILE_Write(sdHdl, &bytewritten, total, buf, byteread, 0);
+                    if (R_FAILED(res)) break;
+                } while (bytewritten < byteread);
+                if (R_FAILED(res)) break;
+                total += byteread; transferFileProgress = total;
+                ShowProgress();
+            }
+            FSFILE_Flush(sdHdl);
+            FSFILE_Close(sdHdl);
+        }
+        FSFILE_Close(handle);
+        if (R_FAILED(res)) return res;
+    }
+    return res;
+}
+
 void Transfer::PrePerform(){
     Handle filehdl; transferIsViable = 0;
     bool mk7ok = false, ctgp7ok = false;
-    FS_Archive archive;
+    FS_Archive archive; mk7hasCTGhosts = false;
     FSUSER_OpenArchive(&archive, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY,""));
     for (int i=0; i<10; i++){
         sprintf(transferPath,TRANSFER_MK7_PREFIX"system%d.dat", i);
@@ -201,6 +233,11 @@ void Transfer::PrePerform(){
             FSFILE_Close(filehdl);
         }
     }
+    for (int i=32; i<256; i++){
+        sprintf(transferPath,TRANSFER_MK7_PREFIX"replay/replay%02d.dat", i);
+        mk7hasCTGhosts |= R_SUCCEEDED(FSUSER_OpenFile(&filehdl, saveArc, fsMakePath(PATH_ASCII,transferPath), FS_OPEN_READ, 0));
+        FSFILE_Close(filehdl);
+    }
     FSUSER_CloseArchive(archive);
 }
 
@@ -211,7 +248,7 @@ Result Transfer::Perform(){
     if (transferMode){
         if (transferStatistics){
             for (int i=0; i<10; i++) {
-               sprintf(transferPath, TRANSFER_CTGP7_PREFIX"system%d.dat", i);
+                sprintf(transferPath, TRANSFER_CTGP7_PREFIX"system%d.dat", i);
                 remove(transferPath);
             }
             if(R_FAILED(res = writeToCTGP("system%d.dat", 0, 10))) return res;
@@ -285,4 +322,16 @@ void Transfer::Exit(){
 
 bool Transfer::isConfigVerOK(char* fvc){
     return true;
+}
+
+Result Transfer::BackupGhosts(int start, int end) {
+    Result res; sprintf(transferPath, "%c", 0); ShowProgress();
+    mkdir("sdmc:" TRANSFER_CTGHOSTBAK_PATH, 777);
+    mkdir("sdmc:" TRANSFER_CTGHOSTBAK_PATH "/replay", 777);
+    for (int i=start; i<=end; i++){
+        sprintf(transferPath, "/replay/replay%02d.dat", i);
+        toSD(transferPath, TRANSFER_CTGHOSTBAK_PATH);
+        FSUSER_DeleteFile(saveArc, fsMakePath(PATH_ASCII,transferPath));
+    }
+    return res;
 }

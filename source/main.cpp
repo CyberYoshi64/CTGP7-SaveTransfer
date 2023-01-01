@@ -1,10 +1,12 @@
 #include "common.hpp"
 
-#define CONFIG_3D_SLIDERSTATE (*(float *)0x1FF81080)
+#define showErr()	retAppMode=777; appMode=32768;
 
 static touchPosition touch;
+extern u16 retAppMode;
+extern u16 appMode;
 extern int errorcode;
-extern char errorstr;
+extern char errorstr[];
 bool dspfirmfound = false;
 bool exiting = false;
 extern bool fadein, fadeout;
@@ -37,6 +39,13 @@ int main() {
 		snd_succ = new Sound("romfs:/snd/SE_SUCCESS.bcwav", 1);
 		snd_fail = new Sound("romfs:/snd/SE_FAILURE.bcwav", 1);
 	}
+	if (access("sdmc:/CTGP-7/resources/CTGP-7.3gx", F_OK )==-1 || access("sdmc:/CTGP-7/config/version.bin", F_OK )==-1){
+		sprintf(errorstr, "CTGP-7 has not been detected.\nPlease install it first, before you\ncan transfer your save data.\n\nThis app will now close.");
+		showErr();
+	} else if (access("sdmc:/CTGP-7/savefs/game", F_OK)==-1) {
+		sprintf(errorstr, "The save data for CTGP-7 could not be detected.\n\nMake sure that your CTGP-7 installation is\nup-to-date and that you have run the mod\nat least once after installing it.\n\nThis app will now close.");
+		showErr();
+	}
 	while (aptMainLoop()){
 		hidScanInput();
 		u32 hHeld = hidKeysHeld();
@@ -45,7 +54,7 @@ int main() {
 		Gui::clearTextBufs();
 		Gui::ScreenLogic(hDown, hHeld, touch);
 		Gui::fadeEffects();
-		if (exiting && !fadeout) break;
+		if (exitCondition()) break;
 	}
 	delete snd_accept;
 	delete snd_back;

@@ -24,6 +24,8 @@
 #define TRANSFER_DEST_MK7   false
 #define TRANSFER_DEST_CTGP7 true
 
+#define TRANSFER_SDMC_PREFIX "sdmc:"
+#define TRANSFER_CTGHOSTBAK_PATH "/CTghostbak"
 #define TRANSFER_CTGP7_PREFIX "/CTGP-7/savefs/game/"
 #define TRANSFER_MK7_PREFIX "/"
 
@@ -38,4 +40,5 @@ namespace Transfer {
     void Exit();
     void PrePerform();
     bool isConfigVerOK(char* fvc);
+    Result BackupGhosts(int start, int end);
 }

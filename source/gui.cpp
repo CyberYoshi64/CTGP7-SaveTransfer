@@ -1,6 +1,9 @@
 #include "gui.hpp"
+#include "main.hpp"
 #include "transfer.hpp"
 #include "mk7courseid.hpp"
+
+#define showErr(a)	retAppMode=a; appMode=32768; sel=false; SFX::Fail();
 
 static C2D_SpriteSheet gfx_main;
 static C2D_SpriteSheet gfx_region;
@@ -22,6 +25,7 @@ extern u8 transferRegion;
 extern bool transferIsSD;
 extern u8 trnsfGameCartRegion;
 extern u8 trnsfAvailRegion;
+extern bool mk7hasCTGhosts;
 extern bool transferStatistics;
 extern bool transferIncludeGhosts[];
 extern bool transferHasGhosts[];
@@ -36,12 +40,13 @@ u32 fadecolor;
 C3D_RenderTarget *top;
 C3D_RenderTarget *bottom;
 
-u16 appMode;
+u16 appMode, retAppMode;
 int buttonSel;
 
 void Gui::clearTextBufs(void) {
 	C2D_TextBufClear(sizeBuf);
 }
+bool exitCondition(void){return(exiting&&!fadeout&&(appMode<9999));}
 Result Gui::init(void) {
 	C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
 	C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
@@ -236,7 +241,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	gcls(bottom, COLOR_APPBG_BOT);
 	C2D_SceneBegin(top);
 	Draw_Text_Center(200, 48, 0.6f, COLOR_TTLBNR, "CTGP-7 Save Transfer Tool");
-	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, "v0.3");
+	Draw_Text_Right(380,216,.5f, COLOR_VERBNR, VERSION_STRING);
 	sprite(gfx_main, gfx_main_mainicon_idx, 128, 80);
 	Draw_Rect(0,0,400,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C2D_SceneBegin(bottom);
@@ -251,6 +256,11 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	}
 	bool pg2cont = anyGhostPicked||transferStatistics;
 	switch (appMode) {
+		case 32768:
+			DrawStrBoxCC(160, 104, 0.5f, COLOR_BT_TX_NORMAL, errorstr, 304, 192);
+			Draw_Rect(40, 200, 240, 32, GuiButtonColor(buttonSel==0, 1));
+			Draw_Text_Center(160, 205, 0.625f, COLOR_BT_TX_NORMAL, "OK");
+			break;
 		case 0:
 			DrawStrBoxC(160, 16, 0.5f, -1, "Which way do you want to transfer?",300);
 			Draw_Rect(40, 85, 240, 40, GuiButtonColor(buttonSel==0, 1));
@@ -330,13 +340,23 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 		Draw_Text(10, 220, 0.5f, COLOR_HINT_TX, "\uE001 Back");
 	Draw_Rect(0,0,320,240,(fadecolor & 16777215)|(u8)fadealpha<<24);
 	C3D_FrameEnd(0);
-	if (!exiting && !fadeout){
+	if (!exitCondition()){
 		u16 appMode_b = appMode; bool sel=false; Result res;
 		u32 dir = !!(hDown & BUTTON_DIR);
 		int dirh = !!(hDown & KEY_LEFT)*-1 + !!(hDown & KEY_RIGHT);
 		int dirv = !!(hDown & KEY_UP)*-1 + !!(hDown & KEY_DOWN);
-		u32 pg2while1=7;
 		switch (appMode) {
+			case 777:
+				exiting = true;
+				break;
+			case 32768:
+				if (hDown & BUTTON_OK) sel=true;
+				sel |= (touchedArea(touchpx, touchpy, 40, 200, 240, 32) && touchpt && !touchot);
+				if (sel) {
+					SFX::Accept();
+					appMode = retAppMode;
+				}
+				break;
 			case 0:
 				if (dirv) buttonSel = !buttonSel;
 				if (hDown & BUTTON_OK) sel=true;
@@ -345,7 +365,8 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 				if (sel) {
 					transferMode = !!buttonSel; SFX::Accept(); appMode=1;
 					if (access("sdmc:/CTGP-7/config/version.bin", F_OK) == -1){
-						errorcode=-1; exiting=true; fadeout=true;
+						showErr(0);
+						exiting=true; fadeout=true;
 						sprintf(errorstr, "CTGP-7 is either not installed or its version is not supported.\n\nThis application will now close.");
 					}
 				}
@@ -383,7 +404,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 				if (sel){
 					if (buttonSel==0){
 						if (!gameCartGood){
-							errorcode=-1; sel=false;
+							showErr(2);
 							if (trnsfGameCartRegion == 255) {
 								sprintf(errorstr,
 								"The game cart cannot be used.\n\n"
@@ -402,7 +423,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 						}
 					} else {
 						if(!((trnsfAvailRegion>>(buttonSel-1))&1)){
-							errorcode=-1; sel=false;
+							showErr(2);
 							sprintf(errorstr,"This version of Mario Kart 7 couldn't be detected.\nYou might not own it or it was modified.");
 						}
 					}
@@ -416,6 +437,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 						Transfer::PrePerform();
 						if ((transferIsViable>>transferMode)&1){
 							appMode=3;
+							if (mk7hasCTGhosts) appMode = 5;
 							memset(&transferIncludeGhosts, 0, TRANSFER_TRACKCOUNT);
 							memset(&availGhostList, -1, sizeof(availGhostList));
 							size_t i = 0;
@@ -425,13 +447,13 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 									availGhostList[availGhostCount++] = i;
 							}
 						} else {
-							errorcode=-1;
-							sprintf(errorstr,"Cannot start the transfer. The following save data is missing:\n%s%s\nMake sure you have run the games at least once to ensure the save data is created.",
+							showErr(2);
+							sprintf(errorstr,"Cannot start the transfer.\n\nThe following save data is missing:\n%s%s\nMake sure you have run the games at least\nonce to ensure their initial save data is created.",
 							(transferIsViable & 1)?"":"- CTGP-7\n", (transferIsViable & 2)?"":"- Mario Kart 7\n");
 						}
 					} else {
-						errorcode=-1;
-						sprintf(errorstr,"The save data does not exist.\n\nPlease ensure to run Mario Kart 7 at least once, so it can create the save data.");
+						showErr(2);
+						sprintf(errorstr,"The save data does not exist.\n\nPlease ensure to run Mario Kart 7 at least once,\nso it can create the save data.");
 					}
 					Transfer::Exit();
 				}
@@ -460,16 +482,16 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 							if (anyGhostsAvailable) {
 								appMode = 4; SFX::Accept();
 							} else {
-								errorcode=-1;
-								sprintf(errorstr,"There isn't any ghost data you can transfer.\n\nMake sure that you chose the correct options.");
+								showErr(3);
+								sprintf(errorstr,"There isn't any ghost data you can transfer.\n\nMake sure you're going to transfer data\nin the correct direction and to the game of the\ncorrect region.");
 							}
 							break;
 						case 2:
 							if (pg2cont){
 								appMode = 8; SFX::Accept();
 							} else {
-								errorcode=-1;
-								sprintf(errorstr,"You are not transferring anything.\nPick \"Transfer main save data\" or pick some course ghosts.");
+								showErr(3);
+								sprintf(errorstr,"You are not transferring anything.\n\nTick \"Transfer main save data\"\nor select some course ghost data.");
 							}
 							break;
 					}
@@ -543,37 +565,66 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 					}
 				}
 				break;
+			case 5:
+				sprintf(errorstr, "Warning:\nGhost data for custom tracks was found inside\nvanilla MK7's save data.\n\nThis data will be moved out to\n\"sdmc:" TRANSFER_CTGHOSTBAK_PATH "\"\nso you can manually move them to CTGP-7\nyourself, if you want to do so.");
+				showErr(6); break;
+			case 6:
+				appMode=3;
+				if (R_FAILED(res = Transfer::Init())){
+					showErr(3);
+					sprintf(errorstr,
+					"Unable to initialize the transfer.\n"
+					"Error code: 0x%08lX\n"
+					"MK7 type: %s, %s\n"
+					"Transferring %s\n\n"
+					"If problems persist, ask for help in the\n"
+					"CTGP-7 Discord server: invite.gg/ctgp7"
+					,res
+					,Transfer::GetRegionString(transferRegion).c_str()
+					,transferIsSD?"Digital":"Physical"
+					,transferMode?"MK7 \uE019 CTGP-7":"CTGP-7 \uE019 MK7");
+				} else if (R_FAILED(res=Transfer::BackupGhosts(32, 255))) {
+						showErr(3);
+						sprintf(errorstr,
+						"The transfer failed.\n\n"
+						"Error code: 0x%08lX\n"
+						"MK7 type: %s, %s\n"
+						"Transferring MK7 \uE019 SD Card\n"
+						"File: %s\n\n"
+						"If problems persist, ask for help in the\n"
+						"CTGP-7 Discord server: invite.gg/ctgp7"
+						,res
+						,Transfer::GetRegionString(transferRegion).c_str()
+						,transferIsSD?"Digital":"Physical"
+						,transferPath);
+				}
+				Transfer::Exit(); break;
 			case 8:
 				SFX::WaitStart(); appMode=0;
 				if (R_FAILED(res = Transfer::Init())){
-					errorcode=-1;
+					showErr(0);
 					sprintf(errorstr,
 						"Unable to initialize the transfer.\n"
 						"Error code: 0x%08lX\n"
 						"MK7 type: %s, %s\n"
 						"Transferring %s\n\n"
-						"Some things to check:"
-						"- Is CTGP-7 installed?\n"
-						"- Was the medium removed?\n"
-						"- Was Mario Kart 7 and CTGP-7 launched at least once?\n\n"
-						"Should issues persist, try contacting CyberYoshi64.\n\n"
+						"If problems persist, ask for help in the\n"
+						"CTGP-7 Discord server: invite.gg/ctgp7"
 						,res
 						,Transfer::GetRegionString(transferRegion).c_str()
 						,transferIsSD?"Digital":"Physical"
 						,transferMode?"MK7 \uE019 CTGP-7":"CTGP-7 \uE019 MK7");
 				} else {
 					if (R_FAILED(res=Transfer::Perform())){
-						errorcode=-1;
+						showErr(0);
 						sprintf(errorstr,
 						"The transfer failed.\n\n"
 						"Error code: 0x%08lX\n"
 						"MK7 type: %s, %s\n"
 						"Transferring %s\n"
 						"File: %s\n\n"
-						"Common solutions:\n"
-						"- Run each Mario Kart 7 and CTGP-7 once more\n"
-						"- Clean the contacts of the game cart\n\n"
-						"If issues don't resolve, try resetting the save data of the target game."
+						"If problems persist, ask for help in the\n"
+						"CTGP-7 Discord server: invite.gg/ctgp7"
 						,res
 						,Transfer::GetRegionString(transferRegion).c_str()
 						,transferIsSD?"Digital":"Physical"
@@ -600,16 +651,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 					}
 				}
 				break;
-			default:
-				errorcode=-1;
-				sprintf(errorstr,"The application has reached an invalid mode and will be closed.\n\nMode: %d",appMode);
-				exiting = true; fadeout=true;
 		}
 		if (appMode_b != appMode) buttonSel=0;
-	}
-	if (errorcode){
-		SFX::Fail();
-		showError(errorstr,errorcode);
-		errorcode=0;
 	}
 }

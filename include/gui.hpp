@@ -70,6 +70,7 @@ namespace Gui {
 	void fadeEffects(void);
 	void Checkmark(float x, float y, u16 align, bool flag, bool selected);
 }
+bool exitCondition(void);
 void Draw_ImageBlend(C2D_SpriteSheet sheet, size_t key, int x, int y, u32 color, float sx = 1, float sy = 1);
 void Draw_ImageAlpha(C2D_SpriteSheet sheet, size_t key, int x, int y, u8 alpha, float sx = 1, float sy = 1);
 void Draw_EndFrame(void);
