@@ -56,11 +56,13 @@ int main() {
 		Gui::fadeEffects();
 		if (exitCondition()) break;
 	}
-	delete snd_accept;
-	delete snd_back;
-	delete snd_wait;
-	delete snd_succ;
-	delete snd_fail;
+	if (dspfirmfound){
+		delete snd_accept;
+		delete snd_back;
+		delete snd_wait;
+		delete snd_succ;
+		delete snd_fail;
+	}
 	if (dspfirmfound) ndspExit();
 	Gui::exit();
 	romfsExit();
@@ -71,9 +73,9 @@ int main() {
 	return 0;
 }
 
-void SFX::Accept() { snd_accept->Play(); }
-void SFX::Back() { snd_back->Play(); }
-void SFX::WaitStart() { snd_wait->Play(); }
-void SFX::WaitEnd() { snd_wait->Stop(); }
-void SFX::Success() { snd_succ->Play(); }
-void SFX::Fail() { snd_fail->Play(); }
+void SFX::Accept() { if (dspfirmfound) snd_accept->Play(); }
+void SFX::Back() { if (dspfirmfound) snd_back->Play(); }
+void SFX::WaitStart() { if (dspfirmfound) snd_wait->Play(); }
+void SFX::WaitEnd() { if (dspfirmfound) snd_wait->Stop(); }
+void SFX::Success() { if (dspfirmfound) snd_succ->Play(); }
+void SFX::Fail() { if (dspfirmfound) snd_fail->Play(); }

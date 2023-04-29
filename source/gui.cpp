@@ -4,6 +4,8 @@
 #include "mk7courseid.hpp"
 
 #define showErr(a)	retAppMode=a; appMode=32768; sel=false; SFX::Fail();
+#define min(a,b)	(a<=b?a:b)
+#define max(a,b)	(a>b?a:b)
 
 static C2D_SpriteSheet gfx_main;
 static C2D_SpriteSheet gfx_region;
@@ -171,6 +173,15 @@ void DrawStrBoxCC(float x, float y, float size, u32 color, const char *text, flo
 	float tempy=C2D_Clamp(height / Draw_GetTextHeight(size, text), 0.0001f, 1.f) * size;
 	C2D_DrawText(&c2d_text, C2D_WithColor | C2D_AlignCenter, x, y - Draw_GetTextHeight(tempy, text) / 2, 0.5f, tempx, tempy, color);
 }
+void DrawStrBoxCCW(float x, float y, float size, u32 color, const char *text, float width, float height, float ww2) {
+	C2D_Text c2d_text;
+	C2D_TextFontParse(&c2d_text, systemFont, sizeBuf, text);
+	C2D_TextOptimize(&c2d_text);
+	float w = Draw_GetTextWidth(size, text);
+	float tempx=C2D_Clamp(width / min(ww2, w), 0.0001f, 1.f) * size;
+	float tempy=C2D_Clamp(height / Draw_GetTextHeight(size, text), 0.0001f, 1.f) * size;
+	C2D_DrawText(&c2d_text, C2D_WithColor | C2D_WordWrap | C2D_AlignCenter, x, y - Draw_GetTextHeight(tempy, text) / 2, 0.5f, tempx, tempy, color, width);
+}
 void Draw_Text_Right(float x, float y, float size, u32 color, const char *text) {
 	C2D_Text c2d_text;
 	C2D_TextFontParse(&c2d_text, systemFont, sizeBuf, text);
@@ -257,7 +268,7 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 	bool pg2cont = anyGhostPicked||transferStatistics;
 	switch (appMode) {
 		case 32768:
-			DrawStrBoxCC(160, 104, 0.5f, COLOR_BT_TX_NORMAL, errorstr, 304, 192);
+			DrawStrBoxCCW(160, 104, 0.5f, COLOR_BT_TX_NORMAL, errorstr, 304, 192, 336);
 			Draw_Rect(40, 200, 240, 32, GuiButtonColor(buttonSel==0, 1));
 			Draw_Text_Center(160, 205, 0.625f, COLOR_BT_TX_NORMAL, "OK");
 			break;
@@ -448,12 +459,12 @@ void Gui::ScreenLogic(u32 hDown, u32 hHeld, touchPosition touch){
 							}
 						} else {
 							showErr(2);
-							sprintf(errorstr,"Cannot start the transfer.\n\nThe following save data is missing:\n%s%s\nMake sure you have run the games at least\nonce to ensure their initial save data is created.",
+							sprintf(errorstr,"Cannot start the transfer.\n\nThe following save data is missing:\n%s%s\nMake sure you have run the games at least once to ensure their initial save data is created.",
 							(transferIsViable & 1)?"":"- CTGP-7\n", (transferIsViable & 2)?"":"- Mario Kart 7\n");
 						}
 					} else {
 						showErr(2);
-						sprintf(errorstr,"The save data does not exist.\n\nPlease ensure to run Mario Kart 7 at least once,\nso it can create the save data.");
+						sprintf(errorstr,"The save data does not exist.\n\nPlease ensure to run Mario Kart 7 at least once, so the save data has been created.");
 					}
 					Transfer::Exit();
 				}
